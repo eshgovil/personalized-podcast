@@ -51,6 +51,7 @@ class PodcastConfigModel(BaseModel):
     name: str
     schedule: str = "0 7 * * *"
     target_length_minutes: int = 10
+    show_prompt: str = ""
 
 
 class ConfigModel(BaseModel):
@@ -87,6 +88,7 @@ def load_config(config_path: str) -> tuple[Podcast, ConfigModel]:
         ],
         target_length_minutes=config.podcast.target_length_minutes,
         schedule=config.podcast.schedule,
+        show_prompt=config.podcast.show_prompt,
     )
 
     return podcast, config

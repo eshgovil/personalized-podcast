@@ -15,6 +15,7 @@ class Podcast:
     hosts: list[HostConfig]
     target_length_minutes: int = 10
     schedule: str = "0 7 * * *"
+    show_prompt: str = ""
     id: UUID = field(init=False)
 
     def __post_init__(self) -> None:

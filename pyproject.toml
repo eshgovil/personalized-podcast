@@ -21,6 +21,8 @@ dependencies = [
     "pyyaml>=6.0",
     "pydantic>=2.0",
     "typer>=0.12",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
 ]
 
 [dependency-groups]

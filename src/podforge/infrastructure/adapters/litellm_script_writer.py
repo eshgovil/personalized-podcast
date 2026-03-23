@@ -8,35 +8,22 @@ from podforge.domain.value_objects.script_segment import (
     ScriptSegment,
     SegmentType,
 )
+from podforge.infrastructure.prompts import (
+    build_script_writer_system,
+    build_script_writer_user,
+)
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT_TEMPLATE = """\
-You are a podcast script writer. Write a natural, engaging conversation \
-between podcast hosts discussing today's news.
-
-The conversation should feel authentic — hosts can agree, disagree, ask \
-follow-up questions, make jokes, and share opinions based on their personalities.
-
-Target length: ~{target_words} words ({target_length_minutes} minutes of audio)
-
-Hosts:
-{host_descriptions}
-
-Output ONLY a JSON array of objects with these fields:
-- "host_name": the speaking host's name (must match exactly)
-- "text": what they say (natural spoken language, not written prose)
-- "segment_type": one of "intro", "discussion", "transition", "outro"
-
-Start with an intro where hosts greet listeners, cover the main stories with \
-natural back-and-forth discussion, use transitions between topics, and end \
-with a brief outro. Keep the dialogue conversational — short turns, reactions, \
-and follow-ups feel more natural than long monologues."""
-
 
 class LitellmScriptWriter:
-    def __init__(self, model: str = "anthropic/claude-sonnet-4-6-20250514") -> None:
+    def __init__(
+        self,
+        model: str = "anthropic/claude-sonnet-4-6-20250514",
+        show_prompt: str = "",
+    ) -> None:
         self._model = model
+        self._show_prompt = show_prompt
 
     def write_script(
         self,
@@ -45,13 +32,11 @@ class LitellmScriptWriter:
         target_length_minutes: int,
     ) -> list[ScriptSegment]:
         host_descriptions = "\n".join(f"- {h.name}: {h.personality}" for h in hosts)
-        # ~150 words per minute of spoken audio
-        target_words = target_length_minutes * 150
 
-        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
-            target_words=target_words,
+        system_prompt = build_script_writer_system(
             target_length_minutes=target_length_minutes,
             host_descriptions=host_descriptions,
+            show_prompt=self._show_prompt,
         )
 
         logger.info(
@@ -63,9 +48,7 @@ class LitellmScriptWriter:
                 {"role": "system", "content": system_prompt},
                 {
                     "role": "user",
-                    "content": (
-                        f"Write a podcast script for this briefing:\n\n{summary}"
-                    ),
+                    "content": build_script_writer_user(summary),
                 },
             ],
         )
@@ -77,7 +60,6 @@ class LitellmScriptWriter:
 
     def _parse_script(self, content: str) -> list[ScriptSegment]:
         content = content.strip()
-        # Strip markdown code block if present
         if content.startswith("```"):
             lines = content.split("\n")
             content = "\n".join(lines[1:-1])
