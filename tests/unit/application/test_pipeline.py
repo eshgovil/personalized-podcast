@@ -200,6 +200,62 @@ class TestPipelineResume:
         assert episode.status == EpisodeStatus.DELIVERED
 
 
+class TestPipelineMixedSources:
+    def test_aggregates_articles_from_multiple_source_kinds(self) -> None:
+        rss_article = Article(
+            title="RSS Article",
+            content="From RSS feed.",
+            source_url="http://example.com/rss/1",
+            source_name="RSS Feed",
+        )
+        web_article = Article(
+            title="Web Article",
+            content="From web page.",
+            source_url="http://example.com/page",
+            source_name="Blog",
+        )
+        store = FakeEpisodeStore()
+        channel = FakeDeliveryChannel()
+
+        podcast = Podcast(
+            name="Mixed Sources",
+            sources=[
+                SourceConfig(
+                    name="RSS Feed",
+                    kind=SourceKind.RSS,
+                    url="http://example.com/rss",
+                ),
+                SourceConfig(
+                    name="Blog",
+                    kind=SourceKind.WEB_PAGE,
+                    url="http://example.com/page",
+                ),
+            ],
+            hosts=[
+                HostConfig(name="Alice", personality="Curious", voice_id="v1"),
+                HostConfig(name="Bob", personality="Skeptical", voice_id="v2"),
+            ],
+        )
+
+        pipeline = PipelineService(
+            fetchers={
+                SourceKind.RSS: FakeContentFetcher([rss_article]),
+                SourceKind.WEB_PAGE: FakeContentFetcher([web_article]),
+            },
+            summarizer=FakeSummarizer(),
+            script_writer=FakeScriptWriter(segments=SAMPLE_SCRIPT),
+            synthesizer=FakeSpeechSynthesizer(),
+            mixer=FakeAudioMixer(),
+            episode_store=store,
+            channels=[channel],
+        )
+
+        episode = pipeline.run(podcast, TODAY)
+        assert episode.status == EpisodeStatus.DELIVERED
+        assert len(episode.articles) == 2
+        assert {a.title for a in episode.articles} == {"RSS Article", "Web Article"}
+
+
 class TestPipelineFailures:
     def test_fails_on_no_articles(self) -> None:
         pipeline, _, _ = _make_pipeline(articles=[])

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 from bs4 import BeautifulSoup
@@ -9,10 +9,9 @@ from podforge.domain.value_objects.source_config import SourceConfig
 
 logger = logging.getLogger(__name__)
 
-# Tags that typically hold main article content
-_CONTENT_TAGS = ["article", "main", '[role="main"]']
+# CSS selectors for containers that typically hold main article content
+_CONTENT_SELECTORS = ["article", "main", '[role="main"]']
 
-# Tags whose text is noise, not content
 _STRIP_TAGS = [
     "script",
     "style",
@@ -25,9 +24,11 @@ _STRIP_TAGS = [
     "iframe",
 ]
 
+_MIN_LINE_LENGTH = 3
+
 
 class WebFetcher:
-    """Fetches a single article from a web page URL."""
+    """Fetches article content from a web page URL."""
 
     def __init__(self, client: httpx.Client | None = None) -> None:
         self._client = client or httpx.Client(
@@ -59,7 +60,7 @@ class WebFetcher:
             content=content,
             source_url=source.url,
             source_name=source.name,
-            published_at=datetime.now(),
+            published_at=datetime.now(tz=UTC),
         )
         logger.info("Extracted article: %s (%d chars)", title, len(content))
         return [article]
@@ -86,7 +87,7 @@ class WebFetcher:
             tag.decompose()
 
         # Try semantic content containers first
-        for selector in _CONTENT_TAGS:
+        for selector in _CONTENT_SELECTORS:
             container = soup.select_one(selector)
             if container:
                 return self._clean_text(container.get_text(separator="\n"))
@@ -100,6 +101,5 @@ class WebFetcher:
 
     def _clean_text(self, text: str) -> str:
         lines = [line.strip() for line in text.splitlines()]
-        # Drop blank lines and very short lines (likely nav remnants)
-        lines = [line for line in lines if len(line) > 2]
+        lines = [line for line in lines if len(line) >= _MIN_LINE_LENGTH]
         return "\n".join(lines)

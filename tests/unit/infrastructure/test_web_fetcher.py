@@ -6,15 +6,27 @@ from podforge.infrastructure.adapters.web_fetcher import WebFetcher
 
 SIMPLE_HTML = """\
 <html>
-<head><title>Test Article Title</title></head>
+<head><title>Title Tag Text</title></head>
 <body>
   <nav><a href="/">Home</a></nav>
   <article>
-    <h1>Test Article Title</h1>
+    <h1>Article Heading</h1>
     <p>This is the main body of the article with some interesting content.</p>
     <p>It continues with more detail about the topic at hand.</p>
   </article>
   <footer>Copyright 2026</footer>
+</body>
+</html>"""
+
+MAIN_TAG_HTML = """\
+<html>
+<head><title>Main Tag Page</title></head>
+<body>
+  <nav><a href="/">Home</a></nav>
+  <main>
+    <h1>Main Content Heading</h1>
+    <p>This content lives inside a main tag, not an article tag.</p>
+  </main>
 </body>
 </html>"""
 
@@ -43,6 +55,22 @@ OG_TITLE_HTML = """\
 <body><article><p>Content here.</p></article></body>
 </html>"""
 
+H1_ONLY_HTML = """\
+<html>
+<head></head>
+<body>
+  <h1>Heading As Title</h1>
+  <article><p>Article content with only an h1 for title.</p></article>
+</body>
+</html>"""
+
+NO_TITLE_HTML = """\
+<html>
+<body>
+  <article><p>Content with no title metadata at all.</p></article>
+</body>
+</html>"""
+
 
 def _source() -> SourceConfig:
     return SourceConfig(name="Test", kind=SourceKind.WEB_PAGE, url="http://example.com")
@@ -66,7 +94,18 @@ class TestWebFetcherExtraction:
 
         assert len(articles) == 1
         assert "main body of the article" in articles[0].content
-        assert articles[0].title == "Test Article Title"
+
+    def test_prefers_title_tag_over_h1(self) -> None:
+        fetcher = _fetcher_with_response(SIMPLE_HTML)
+        articles = fetcher.fetch(_source())
+        assert articles[0].title == "Title Tag Text"
+
+    def test_extracts_main_tag_content(self) -> None:
+        fetcher = _fetcher_with_response(MAIN_TAG_HTML)
+        articles = fetcher.fetch(_source())
+
+        assert len(articles) == 1
+        assert "inside a main tag" in articles[0].content
 
     def test_strips_nav_and_footer(self) -> None:
         fetcher = _fetcher_with_response(SIMPLE_HTML)
@@ -90,8 +129,17 @@ class TestWebFetcherExtraction:
     def test_prefers_og_title(self) -> None:
         fetcher = _fetcher_with_response(OG_TITLE_HTML)
         articles = fetcher.fetch(_source())
-
         assert articles[0].title == "OG Title Wins"
+
+    def test_falls_back_to_h1_title(self) -> None:
+        fetcher = _fetcher_with_response(H1_ONLY_HTML)
+        articles = fetcher.fetch(_source())
+        assert articles[0].title == "Heading As Title"
+
+    def test_untitled_when_no_title_metadata(self) -> None:
+        fetcher = _fetcher_with_response(NO_TITLE_HTML)
+        articles = fetcher.fetch(_source())
+        assert articles[0].title == "Untitled"
 
     def test_sets_source_metadata(self) -> None:
         fetcher = _fetcher_with_response(SIMPLE_HTML)

@@ -1,13 +1,19 @@
 """Prompt templates for LLM adapters.
 
-Templates use str.format() placeholders. Each template documents its
-required variables in a comment above it.
+The public API is the four `build_*` functions. Templates are internal.
 """
 
-# --- Summarizer -----------------------------------------------------------
-# Variables: show_prompt (str, may be empty)
 
-SUMMARIZER_SYSTEM = """\
+def show_prompt_section(show_prompt: str) -> str:
+    """Wrap show_prompt in a labeled section, or return empty string."""
+    if not show_prompt.strip():
+        return ""
+    return f"\nShow direction:\n{show_prompt.strip()}\n"
+
+
+# --- Summarizer -----------------------------------------------------------
+
+_SUMMARIZER_SYSTEM = """\
 You are a news editor preparing a briefing for a podcast.
 
 Summarize the following articles into a concise briefing.
@@ -18,17 +24,20 @@ Write in a way that gives podcast hosts enough material to have a natural \
 conversation.
 {show_prompt_section}"""
 
-SUMMARIZER_USER = """\
-Summarize these articles for today's podcast:
 
-{articles_text}"""
+def build_summarizer_system(show_prompt: str = "") -> str:
+    return _SUMMARIZER_SYSTEM.format(
+        show_prompt_section=show_prompt_section(show_prompt),
+    )
+
+
+def build_summarizer_user(articles_text: str) -> str:
+    return f"Summarize these articles for today's podcast:\n\n{articles_text}"
 
 
 # --- Script Writer --------------------------------------------------------
-# Variables: target_words, target_length_minutes, host_descriptions,
-#            show_prompt (str, may be empty)
 
-SCRIPT_WRITER_SYSTEM = """\
+_SCRIPT_WRITER_SYSTEM = """\
 You are a podcast script writer. Write a natural, engaging conversation \
 between podcast hosts discussing today's news.
 
@@ -40,7 +49,7 @@ Target length: ~{target_words} words ({target_length_minutes} minutes of audio)
 
 Hosts:
 {host_descriptions}
-{show_prompt_section}\
+{show_prompt_section}
 Output ONLY a JSON array of objects with these fields:
 - "host_name": the speaking host's name (must match exactly)
 - "text": what they say (natural spoken language, not written prose)
@@ -51,28 +60,6 @@ natural back-and-forth discussion, use transitions between topics, and end \
 with a brief outro. Keep the dialogue conversational — short turns, reactions, \
 and follow-ups feel more natural than long monologues."""
 
-SCRIPT_WRITER_USER = """\
-Write a podcast script for this briefing:
-
-{summary}"""
-
-
-def _show_prompt_section(show_prompt: str) -> str:
-    """Wrap show_prompt in a labeled section, or return empty string."""
-    if not show_prompt.strip():
-        return ""
-    return f"\nShow direction:\n{show_prompt.strip()}\n"
-
-
-def build_summarizer_system(show_prompt: str = "") -> str:
-    return SUMMARIZER_SYSTEM.format(
-        show_prompt_section=_show_prompt_section(show_prompt),
-    )
-
-
-def build_summarizer_user(articles_text: str) -> str:
-    return SUMMARIZER_USER.format(articles_text=articles_text)
-
 
 def build_script_writer_system(
     target_length_minutes: int,
@@ -80,13 +67,13 @@ def build_script_writer_system(
     show_prompt: str = "",
 ) -> str:
     target_words = target_length_minutes * 150
-    return SCRIPT_WRITER_SYSTEM.format(
+    return _SCRIPT_WRITER_SYSTEM.format(
         target_words=target_words,
         target_length_minutes=target_length_minutes,
         host_descriptions=host_descriptions,
-        show_prompt_section=_show_prompt_section(show_prompt),
+        show_prompt_section=show_prompt_section(show_prompt),
     )
 
 
 def build_script_writer_user(summary: str) -> str:
-    return SCRIPT_WRITER_USER.format(summary=summary)
+    return f"Write a podcast script for this briefing:\n\n{summary}"
