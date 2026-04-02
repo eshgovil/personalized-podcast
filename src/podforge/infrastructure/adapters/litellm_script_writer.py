@@ -35,9 +35,7 @@ and follow-ups feel more natural than long monologues."""
 
 
 class LitellmScriptWriter:
-    def __init__(
-        self, model: str = "anthropic/claude-sonnet-4-6-20250514"
-    ) -> None:
+    def __init__(self, model: str = "anthropic/claude-sonnet-4-6-20250514") -> None:
         self._model = model
 
     def write_script(
@@ -46,9 +44,7 @@ class LitellmScriptWriter:
         hosts: list[HostConfig],
         target_length_minutes: int,
     ) -> list[ScriptSegment]:
-        host_descriptions = "\n".join(
-            f"- {h.name}: {h.personality}" for h in hosts
-        )
+        host_descriptions = "\n".join(f"- {h.name}: {h.personality}" for h in hosts)
         # ~150 words per minute of spoken audio
         target_words = target_length_minutes * 150
 
@@ -68,8 +64,7 @@ class LitellmScriptWriter:
                 {
                     "role": "user",
                     "content": (
-                        "Write a podcast script for this briefing:"
-                        f"\n\n{summary}"
+                        f"Write a podcast script for this briefing:\n\n{summary}"
                     ),
                 },
             ],

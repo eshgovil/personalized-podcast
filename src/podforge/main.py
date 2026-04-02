@@ -39,8 +39,7 @@ def build_and_run(
 
     # Build LLM model strings in LiteLLM format: "provider/model"
     summarizer_model = (
-        f"{config.providers.summarizer.provider}"
-        f"/{config.providers.summarizer.model}"
+        f"{config.providers.summarizer.provider}/{config.providers.summarizer.model}"
     )
     script_model = (
         f"{config.providers.script_writer.provider}"

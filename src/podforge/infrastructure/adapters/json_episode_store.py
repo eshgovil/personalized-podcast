@@ -107,19 +107,13 @@ class JsonEpisodeStore:
             summary=str(data["summary"]) if data.get("summary") else None,
             audio_path=str(data["audio_path"]) if data.get("audio_path") else None,
             summarizer_model=(
-                str(data["summarizer_model"])
-                if data.get("summarizer_model")
-                else None
+                str(data["summarizer_model"]) if data.get("summarizer_model") else None
             ),
             script_model=(
-                str(data["script_model"])
-                if data.get("script_model")
-                else None
+                str(data["script_model"]) if data.get("script_model") else None
             ),
             speech_provider=(
-                str(data["speech_provider"])
-                if data.get("speech_provider")
-                else None
+                str(data["speech_provider"]) if data.get("speech_provider") else None
             ),
             articles=articles,
             script=script,

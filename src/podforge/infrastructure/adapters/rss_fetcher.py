@@ -20,9 +20,7 @@ class RssFetcher:
         response = self._client.get(source.url)
         response.raise_for_status()
         feed = feedparser.parse(response.text)
-        articles = [
-            self._to_article(entry, source) for entry in feed.entries
-        ]
+        articles = [self._to_article(entry, source) for entry in feed.entries]
         logger.info("Got %d articles from %s", len(articles), source.name)
         return articles
 
@@ -32,9 +30,7 @@ class RssFetcher:
         content = entry.get("summary", "") or entry.get("description", "")
         published_at = None
         if entry.get("published_parsed"):
-            published_at = datetime.fromtimestamp(
-                time.mktime(entry.published_parsed)
-            )
+            published_at = datetime.fromtimestamp(time.mktime(entry.published_parsed))
 
         return Article(
             title=entry.get("title", "Untitled"),

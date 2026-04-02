@@ -26,9 +26,7 @@ class KokoroSynthesizer:
         )
 
         chunks: list[np.ndarray] = []
-        for result in self._pipeline(
-            segment.text, voice=host.voice_id, speed=1
-        ):
+        for result in self._pipeline(segment.text, voice=host.voice_id, speed=1):
             # Kokoro yields (graphemes, phonemes, audio) tuples
             audio = result[-1]
             chunks.append(audio)
