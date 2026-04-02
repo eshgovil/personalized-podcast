@@ -7,7 +7,11 @@ app = typer.Typer(help="PodForge — personalized podcast generator")
 
 
 STAGE_NAMES = [
-    "fetch", "summarize", "script", "synthesize", "deliver",
+    "fetch",
+    "summarize",
+    "script",
+    "synthesize",
+    "deliver",
 ]
 
 
@@ -25,9 +29,7 @@ def generate(
         "-s",
         help="Re-run from this stage: fetch, summarize, script, synthesize, deliver",
     ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable debug logging"
-    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
     """Generate a podcast episode from configured sources."""
     logging.basicConfig(
@@ -53,8 +55,7 @@ def generate(
     if from_stage:
         if from_stage not in stage_to_status:
             typer.echo(
-                f"Unknown stage '{from_stage}'. "
-                f"Choose from: {', '.join(STAGE_NAMES)}"
+                f"Unknown stage '{from_stage}'. Choose from: {', '.join(STAGE_NAMES)}"
             )
             raise typer.Exit(1)
         rewind_status = stage_to_status[from_stage]

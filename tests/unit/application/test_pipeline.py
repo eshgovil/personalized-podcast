@@ -63,7 +63,9 @@ def _make_podcast() -> Podcast:
     return Podcast(
         name="Test Podcast",
         sources=[
-            SourceConfig(name="Test RSS", kind=SourceKind.RSS, url="http://example.com/rss"),
+            SourceConfig(
+                name="Test RSS", kind=SourceKind.RSS, url="http://example.com/rss"
+            ),
         ],
         hosts=[
             HostConfig(name="Alice", personality="Curious", voice_id="v1"),

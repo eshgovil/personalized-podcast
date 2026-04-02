@@ -72,9 +72,7 @@ class PipelineService:
 
         return episode
 
-    def _rewind_to(
-        self, episode: Episode, target: EpisodeStatus
-    ) -> Episode:
+    def _rewind_to(self, episode: Episode, target: EpisodeStatus) -> Episode:
         stage_order = list(EpisodeStatus)
         current_idx = stage_order.index(episode.status)
         target_idx = stage_order.index(target)
@@ -88,9 +86,7 @@ class PipelineService:
             self._episode_store.save(episode)
         return episode
 
-    def _resume_or_create(
-        self, podcast: Podcast, target_date: date
-    ) -> Episode:
+    def _resume_or_create(self, podcast: Podcast, target_date: date) -> Episode:
         existing = self._episode_store.load(podcast.id, target_date)
         if existing:
             logger.info(
@@ -101,9 +97,7 @@ class PipelineService:
         self._episode_store.save(episode)
         return episode
 
-    def _fetch_articles(
-        self, podcast: Podcast, episode: Episode
-    ) -> Episode:
+    def _fetch_articles(self, podcast: Podcast, episode: Episode) -> Episode:
         logger.info("Fetching articles from %d sources", len(podcast.sources))
         for source in podcast.sources:
             fetcher = self._fetchers.get(source.kind)
@@ -114,9 +108,7 @@ class PipelineService:
                 articles = fetcher.fetch(source)
                 episode.articles.extend(articles)
             except Exception:
-                logger.warning(
-                    "Failed to fetch from %s", source.name, exc_info=True
-                )
+                logger.warning("Failed to fetch from %s", source.name, exc_info=True)
 
         if not episode.articles:
             episode.status = EpisodeStatus.FAILED
@@ -136,9 +128,7 @@ class PipelineService:
         self._episode_store.save(episode)
         return episode
 
-    def _generate_script(
-        self, podcast: Podcast, episode: Episode
-    ) -> Episode:
+    def _generate_script(self, podcast: Podcast, episode: Episode) -> Episode:
         logger.info(
             "Generating script for %d-minute episode",
             podcast.target_length_minutes,
