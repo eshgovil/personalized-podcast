@@ -200,6 +200,162 @@ class TestPipelineResume:
         assert episode.status == EpisodeStatus.DELIVERED
 
 
+class TestPipelineMixedSources:
+    def test_aggregates_articles_from_multiple_source_kinds(self) -> None:
+        rss_article = Article(
+            title="RSS Article",
+            content="From RSS feed.",
+            source_url="http://example.com/rss/1",
+            source_name="RSS Feed",
+        )
+        web_article = Article(
+            title="Web Article",
+            content="From web page.",
+            source_url="http://example.com/page",
+            source_name="Blog",
+        )
+        store = FakeEpisodeStore()
+        channel = FakeDeliveryChannel()
+
+        podcast = Podcast(
+            name="Mixed Sources",
+            sources=[
+                SourceConfig(
+                    name="RSS Feed",
+                    kind=SourceKind.RSS,
+                    url="http://example.com/rss",
+                ),
+                SourceConfig(
+                    name="Blog",
+                    kind=SourceKind.WEB_PAGE,
+                    url="http://example.com/page",
+                ),
+            ],
+            hosts=[
+                HostConfig(name="Alice", personality="Curious", voice_id="v1"),
+                HostConfig(name="Bob", personality="Skeptical", voice_id="v2"),
+            ],
+        )
+
+        pipeline = PipelineService(
+            fetchers={
+                SourceKind.RSS: FakeContentFetcher([rss_article]),
+                SourceKind.WEB_PAGE: FakeContentFetcher([web_article]),
+            },
+            summarizer=FakeSummarizer(),
+            script_writer=FakeScriptWriter(segments=SAMPLE_SCRIPT),
+            synthesizer=FakeSpeechSynthesizer(),
+            mixer=FakeAudioMixer(),
+            episode_store=store,
+            channels=[channel],
+        )
+
+        episode = pipeline.run(podcast, TODAY)
+        assert episode.status == EpisodeStatus.DELIVERED
+        assert len(episode.articles) == 2
+        assert {a.title for a in episode.articles} == {"RSS Article", "Web Article"}
+
+
+class _FailingFetcher:
+    """A fetcher that always raises, for testing pipeline resilience."""
+
+    def fetch(self, source: SourceConfig) -> list[Article]:
+        raise RuntimeError("Simulated fetch failure")
+
+
+class TestPipelineResilience:
+    def test_continues_when_one_fetcher_fails(self) -> None:
+        """Pipeline delivers if at least one source kind succeeds."""
+        rss_article = Article(
+            title="RSS Article",
+            content="From RSS feed.",
+            source_url="http://example.com/rss/1",
+            source_name="RSS Feed",
+        )
+        podcast = Podcast(
+            name="Resilience Test",
+            sources=[
+                SourceConfig(
+                    name="Flaky Blog",
+                    kind=SourceKind.WEB_PAGE,
+                    url="http://example.com/page",
+                ),
+                SourceConfig(
+                    name="RSS Feed",
+                    kind=SourceKind.RSS,
+                    url="http://example.com/rss",
+                ),
+            ],
+            hosts=[
+                HostConfig(name="Alice", personality="Curious", voice_id="v1"),
+                HostConfig(name="Bob", personality="Skeptical", voice_id="v2"),
+            ],
+        )
+
+        pipeline = PipelineService(
+            fetchers={
+                SourceKind.WEB_PAGE: _FailingFetcher(),  # type: ignore[dict-item]
+                SourceKind.RSS: FakeContentFetcher([rss_article]),
+            },
+            summarizer=FakeSummarizer(),
+            script_writer=FakeScriptWriter(segments=SAMPLE_SCRIPT),
+            synthesizer=FakeSpeechSynthesizer(),
+            mixer=FakeAudioMixer(),
+            episode_store=FakeEpisodeStore(),
+            channels=[FakeDeliveryChannel()],
+        )
+
+        episode = pipeline.run(podcast, TODAY)
+        assert episode.status == EpisodeStatus.DELIVERED
+        assert len(episode.articles) == 1
+        assert episode.articles[0].title == "RSS Article"
+
+    def test_skips_source_with_no_registered_fetcher(self) -> None:
+        """Pipeline gracefully skips source kinds with no fetcher."""
+        rss_article = Article(
+            title="RSS Article",
+            content="From RSS feed.",
+            source_url="http://example.com/rss/1",
+            source_name="RSS Feed",
+        )
+        podcast = Podcast(
+            name="Missing Fetcher Test",
+            sources=[
+                SourceConfig(
+                    name="API Source",
+                    kind=SourceKind.WEB_PAGE,
+                    url="http://example.com/api",
+                ),
+                SourceConfig(
+                    name="RSS Feed",
+                    kind=SourceKind.RSS,
+                    url="http://example.com/rss",
+                ),
+            ],
+            hosts=[
+                HostConfig(name="Alice", personality="Curious", voice_id="v1"),
+                HostConfig(name="Bob", personality="Skeptical", voice_id="v2"),
+            ],
+        )
+
+        pipeline = PipelineService(
+            fetchers={
+                # Only RSS registered, no WEB_PAGE fetcher
+                SourceKind.RSS: FakeContentFetcher([rss_article]),
+            },
+            summarizer=FakeSummarizer(),
+            script_writer=FakeScriptWriter(segments=SAMPLE_SCRIPT),
+            synthesizer=FakeSpeechSynthesizer(),
+            mixer=FakeAudioMixer(),
+            episode_store=FakeEpisodeStore(),
+            channels=[FakeDeliveryChannel()],
+        )
+
+        episode = pipeline.run(podcast, TODAY)
+        assert episode.status == EpisodeStatus.DELIVERED
+        assert len(episode.articles) == 1
+
+
 class TestPipelineFailures:
     def test_fails_on_no_articles(self) -> None:
         pipeline, _, _ = _make_pipeline(articles=[])

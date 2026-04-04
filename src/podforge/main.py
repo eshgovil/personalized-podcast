@@ -1,6 +1,7 @@
 import os
 from datetime import date
 
+from podforge.application.ports.content_fetcher import ContentFetcher
 from podforge.application.ports.speech_synthesizer import (
     SpeechSynthesizer,
 )
@@ -27,6 +28,7 @@ from podforge.infrastructure.adapters.litellm_summarizer import (
 )
 from podforge.infrastructure.adapters.pydub_mixer import PydubMixer
 from podforge.infrastructure.adapters.rss_fetcher import RssFetcher
+from podforge.infrastructure.adapters.web_fetcher import WebFetcher
 from podforge.infrastructure.config.loader import load_config
 
 
@@ -37,7 +39,6 @@ def build_and_run(
 ) -> Episode:
     podcast, config = load_config(config_path)
 
-    # Build LLM model strings in LiteLLM format: "provider/model"
     summarizer_model = (
         f"{config.providers.summarizer.provider}/{config.providers.summarizer.model}"
     )
@@ -46,10 +47,16 @@ def build_and_run(
         f"/{config.providers.script_writer.model}"
     )
 
-    # Wire adapters
-    fetchers = {SourceKind.RSS: RssFetcher()}
-    summarizer = LitellmSummarizer(model=summarizer_model)
-    script_writer = LitellmScriptWriter(model=script_model)
+    fetchers: dict[SourceKind, ContentFetcher] = {
+        SourceKind.RSS: RssFetcher(),
+        SourceKind.WEB_PAGE: WebFetcher(),
+    }
+    summarizer = LitellmSummarizer(
+        model=summarizer_model, show_prompt=podcast.show_prompt
+    )
+    script_writer = LitellmScriptWriter(
+        model=script_model, show_prompt=podcast.show_prompt
+    )
     synthesizer: SpeechSynthesizer
     if config.providers.speech.provider == SpeechProvider.KOKORO:
         synthesizer = KokoroSynthesizer()

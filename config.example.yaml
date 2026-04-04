@@ -3,6 +3,14 @@ podcast:
   schedule: "0 7 * * *"
   target_length_minutes: 1
 
+  # Show prompt — controls the overall personality, style, and structure of
+  # your podcast. Leave blank for sensible defaults.
+  show_prompt: |
+    You are producing a fast-paced, opinionated tech news show.
+    Keep each topic under 2 minutes. Prioritize stories that are
+    surprising or have real-world impact. Skip anything that's
+    just hype. The tone should be smart and fun, not dry.
+
 sources:
   - name: "Hacker News"
     kind: rss
@@ -10,6 +18,10 @@ sources:
   - name: "TechCrunch"
     kind: rss
     url: "https://techcrunch.com/feed/"
+  # Web page sources extract text content from HTML pages
+  # - name: "Stratechery"
+  #   kind: web_page
+  #   url: "https://stratechery.com/some-article/"
 
 hosts:
   - name: "Alex"
