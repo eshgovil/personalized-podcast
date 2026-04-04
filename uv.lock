@@ -1942,13 +1942,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "audioop-lts", marker = "python_full_version >= '3.13'", specifier = ">=0.2" },
-    { name = "beautifulsoup4", specifier = ">=4.12" },
+    { name = "beautifulsoup4", specifier = "==4.14.3" },
     { name = "elevenlabs", specifier = ">=1.0" },
     { name = "feedparser", specifier = ">=6.0" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "kokoro", specifier = ">=0.8" },
     { name = "litellm", specifier = ">=1.0,<1.82.7" },
-    { name = "lxml", specifier = ">=5.0" },
+    { name = "lxml", specifier = "==6.0.2" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydub", specifier = ">=0.25" },
     { name = "pyyaml", specifier = ">=6.0" },

@@ -4,7 +4,7 @@ The public API is the four `build_*` functions. Templates are internal.
 """
 
 
-def show_prompt_section(show_prompt: str) -> str:
+def _show_prompt_section(show_prompt: str) -> str:
     """Wrap show_prompt in a labeled section, or return empty string."""
     if not show_prompt.strip():
         return ""
@@ -27,7 +27,7 @@ conversation.
 
 def build_summarizer_system(show_prompt: str = "") -> str:
     return _SUMMARIZER_SYSTEM.format(
-        show_prompt_section=show_prompt_section(show_prompt),
+        show_prompt_section=_show_prompt_section(show_prompt),
     )
 
 
@@ -71,7 +71,7 @@ def build_script_writer_system(
         target_words=target_words,
         target_length_minutes=target_length_minutes,
         host_descriptions=host_descriptions,
-        show_prompt_section=show_prompt_section(show_prompt),
+        show_prompt_section=_show_prompt_section(show_prompt),
     )
 
 

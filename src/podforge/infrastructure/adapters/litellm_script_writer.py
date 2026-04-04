@@ -60,9 +60,11 @@ class LitellmScriptWriter:
 
     def _parse_script(self, content: str) -> list[ScriptSegment]:
         content = content.strip()
-        if content.startswith("```"):
-            lines = content.split("\n")
-            content = "\n".join(lines[1:-1])
+        if "```" in content:
+            start = content.index("```")
+            first_newline = content.index("\n", start)
+            end = content.rindex("```")
+            content = content[first_newline + 1 : end].strip()
 
         segments_data = json.loads(content)
         return [

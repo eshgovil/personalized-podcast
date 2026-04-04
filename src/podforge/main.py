@@ -39,7 +39,6 @@ def build_and_run(
 ) -> Episode:
     podcast, config = load_config(config_path)
 
-    # Build LLM model strings in LiteLLM format: "provider/model"
     summarizer_model = (
         f"{config.providers.summarizer.provider}/{config.providers.summarizer.model}"
     )
@@ -48,7 +47,6 @@ def build_and_run(
         f"/{config.providers.script_writer.model}"
     )
 
-    # Wire adapters
     fetchers: dict[SourceKind, ContentFetcher] = {
         SourceKind.RSS: RssFetcher(),
         SourceKind.WEB_PAGE: WebFetcher(),

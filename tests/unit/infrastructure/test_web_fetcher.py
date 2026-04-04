@@ -64,6 +64,18 @@ H1_ONLY_HTML = """\
 </body>
 </html>"""
 
+ROLE_MAIN_HTML = """\
+<html>
+<head><title>Role Main Page</title></head>
+<body>
+  <nav><a href="/">Home</a></nav>
+  <div role="main">
+    <h1>Role Main Heading</h1>
+    <p>This content lives inside a div with role=main.</p>
+  </div>
+</body>
+</html>"""
+
 NO_TITLE_HTML = """\
 <html>
 <body>
@@ -77,7 +89,7 @@ def _source() -> SourceConfig:
 
 
 def _fetcher_with_response(html: str, status_code: int = 200) -> WebFetcher:
-    """Build a WebFetcher backed by a mock httpx transport."""
+    """Build a WebFetcher backed by a fake httpx transport."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status_code, text=html)
@@ -107,6 +119,13 @@ class TestWebFetcherExtraction:
         assert len(articles) == 1
         assert "inside a main tag" in articles[0].content
 
+    def test_extracts_role_main_content(self) -> None:
+        fetcher = _fetcher_with_response(ROLE_MAIN_HTML)
+        articles = fetcher.fetch(_source())
+
+        assert len(articles) == 1
+        assert "inside a div with role=main" in articles[0].content
+
     def test_strips_nav_and_footer(self) -> None:
         fetcher = _fetcher_with_response(SIMPLE_HTML)
         articles = fetcher.fetch(_source())
@@ -121,10 +140,10 @@ class TestWebFetcherExtraction:
         assert len(articles) == 1
         assert "body text" in articles[0].content
 
-    def test_returns_empty_for_no_content(self) -> None:
+    def test_raises_on_no_extractable_content(self) -> None:
         fetcher = _fetcher_with_response(EMPTY_HTML)
-        articles = fetcher.fetch(_source())
-        assert articles == []
+        with pytest.raises(RuntimeError, match="No content could be extracted"):
+            fetcher.fetch(_source())
 
     def test_prefers_og_title(self) -> None:
         fetcher = _fetcher_with_response(OG_TITLE_HTML)

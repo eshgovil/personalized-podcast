@@ -9,9 +9,10 @@ from podforge.domain.value_objects.source_config import SourceConfig
 
 logger = logging.getLogger(__name__)
 
-# CSS selectors for containers that typically hold main article content
+# Selectors for containers that typically hold main article content
 _CONTENT_SELECTORS = ["article", "main", '[role="main"]']
 
+# HTML tags to remove from the DOM before content extraction
 _STRIP_TAGS = [
     "script",
     "style",
@@ -24,7 +25,8 @@ _STRIP_TAGS = [
     "iframe",
 ]
 
-_MIN_LINE_LENGTH = 3
+# Minimum character count; shorter lines are dropped as noise
+_MIN_LINE_CHARS = 3
 
 
 class WebFetcher:
@@ -48,12 +50,15 @@ class WebFetcher:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "lxml")
-        title = self._extract_title(soup)
-        content = self._extract_content(soup)
+        title = self._extract_title(soup, source.url)
+        content = self._extract_content(soup, source.url)
 
         if not content.strip():
-            logger.warning("No content extracted from %s", source.url)
-            return []
+            raise RuntimeError(
+                f"No content could be extracted from {source.url} — "
+                f"the page may require JavaScript, authentication, "
+                f"or uses an unsupported layout"
+            )
 
         article = Article(
             title=title,
@@ -65,7 +70,7 @@ class WebFetcher:
         logger.info("Extracted article: %s (%d chars)", title, len(content))
         return [article]
 
-    def _extract_title(self, soup: BeautifulSoup) -> str:
+    def _extract_title(self, soup: BeautifulSoup, url: str) -> str:
         og_title = soup.find("meta", property="og:title")
         if og_title and hasattr(og_title, "get"):
             og_content = og_title.get("content")
@@ -80,26 +85,31 @@ class WebFetcher:
         if h1:
             return h1.get_text(strip=True)
 
+        logger.warning("No title found (og:title, <title>, <h1>) for %s", url)
         return "Untitled"
 
-    def _extract_content(self, soup: BeautifulSoup) -> str:
+    def _extract_content(self, soup: BeautifulSoup, url: str) -> str:
         for tag in soup.find_all(_STRIP_TAGS):
             tag.decompose()
 
-        # Try semantic content containers first
         for selector in _CONTENT_SELECTORS:
             container = soup.select_one(selector)
             if container:
                 return self._clean_text(container.get_text(separator="\n"))
 
-        # Fall back to body
         body = soup.find("body")
         if body:
+            logger.warning(
+                "No semantic content container found for %s; "
+                "falling back to <body> (content may include non-article text)",
+                url,
+            )
             return self._clean_text(body.get_text(separator="\n"))
 
+        logger.warning("No <body> tag found for %s; using raw document text", url)
         return self._clean_text(soup.get_text(separator="\n"))
 
     def _clean_text(self, text: str) -> str:
         lines = [line.strip() for line in text.splitlines()]
-        lines = [line for line in lines if len(line) >= _MIN_LINE_LENGTH]
+        lines = [line for line in lines if len(line) >= _MIN_LINE_CHARS]
         return "\n".join(lines)
